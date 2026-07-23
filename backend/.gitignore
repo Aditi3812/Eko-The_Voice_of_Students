@@ -1,0 +1,17 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache & Logs
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets & Environment Variables
+.env
+
+# Database / Vector Store
+*.sqlite3
+chroma_db/
+.chroma/
