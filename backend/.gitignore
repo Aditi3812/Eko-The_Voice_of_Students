@@ -11,9 +11,6 @@ __pycache__/
 # Secrets & Environment Variables
 .env
 
-# Editor settings
-.vscode/
-.idea/
 
 # Database / Vector Store
 *.sqlite3
