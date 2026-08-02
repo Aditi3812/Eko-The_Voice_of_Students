@@ -75,9 +75,11 @@ eko-workspace/
     │   └── globals.css
     ├── package.json                   # Frontend Dependencies
     └── next.config.js
+```
 
 Ingestion & RAG Data Flow
 
+```text
 [ User Selects PDF in Dropdown ]
                 │
                 ▼
