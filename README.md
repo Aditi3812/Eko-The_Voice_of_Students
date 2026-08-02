@@ -1,20 +1,25 @@
 # EKO
 
-EKO is a dual-pane study workspace that combines course document viewing, collaborative note editing, and Gemini-powered retrieval and synthesis. The backend is FastAPI with ChromaDB-backed document ingestion, and the frontend is a Next.js workspace UI.
+EKO is a dual-pane study workspace that combines RAG based course document viewing, collaborative note editing, and Gemini-powered retrieval and synthesis. The backend is FastAPI with ChromaDB-backed document ingestion, and the frontend is a Next.js workspace UI.
 
-## Architecture
-
-![EKO Workspace Architecture](image.png)
-
-## What It Does
-
+##  🌟 Key Features
 EKO currently supports:
 
-* Classroom-style document browsing by department, semester, subject, and unit.
-* PDF upload and ingestion into ChromaDB for retrieval-augmented answers.
-* Real-time collaborative notes over a WebSocket room.
-* Gemini-powered study-buddy Q&A and note synthesis.
-* Optional peer availability tracking via the matchmaker endpoint.
+* **Dual-Pane Interactive Workspace:** 
+  * Left Pane: Dynamic PDF reference viewer with document switching per classroom unit.
+  * Right Pane: Rich text workspace editor powered by TipTap with real-time auto-saving and WebSocket collaboration.
+* **Automated Vector Ingestion Pipeline:** 
+  * On-demand PDF parsing, chunking (`RecursiveCharacterTextSplitter`), and embedding generation using `models/gemini-embedding-001`.
+  * Deduplicated vector caching per document and unit in ChromaDB.
+* **Eko Study Buddy (RAG Agent):** 
+  * Context-aware vector search assistant using filtered metadata queries (`unit_id` and `document_id`) to answer questions directly from uploaded materials.
+  * Fallback vector search mechanism across unit-wide knowledge bases.
+* **AI Note Synthesizer Agent:** 
+  * One-click transformation of raw, messy study notes into polished, structured study guides.
+* **Export & Synchronization:** 
+  * Instant PDF export of polished notes via `html2pdf.js`.
+  * Real-time WebSocket synchronization across devices with SQLite/PostgreSQL persistence.
+
 
 ## Tech Stack
 
@@ -60,7 +65,37 @@ Eko/
 ├── temp_uploads/
 └── image.png
 ```
-
+## RAG DATA INGESTION AND FLOW PIPELINE
+```text
+[ User Selects PDF in Dropdown ]
+                │
+                ▼
+  POST /api/v1/course/ensure-ingested
+                │
+        ┌───────┴───────┐
+        │ Existing in   │
+        │ ChromaDB?     │
+        └───────┬───────┘
+       YES │         │ NO
+           │         ▼
+           │  1. Parse PDF pages using PyPDF
+           │  2. Chunk text (size: 800, overlap: 100)
+           │  3. Attach Metadata (unit_id, document_id, page, source)
+           │  4. Embed via 'models/gemini-embedding-001'
+           │  5. Persist to ChromaDB collection
+           │
+           ▼
+[ Ready for Study Buddy Queries ]
+                │
+                ▼
+  POST /api/v1/agent/study-buddy/query
+                │
+  Search ChromaDB Collection using metadata filter:
+  {"document_id": doc_id} ──(Fallback)──> Search Entire Unit
+                │
+                ▼
+  Context Retrieved ──> LLM Response Generated
+```
 ## Setup
 
 ### Prerequisites
