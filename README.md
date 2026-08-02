@@ -2,7 +2,8 @@
 
 EKO is a dual-pane study workspace that combines RAG based course document viewing, collaborative note editing, and Gemini-powered retrieval and synthesis. The backend is FastAPI with ChromaDB-backed document ingestion, and the frontend is a Next.js workspace UI.
 
-##  🌟 Key Features
+
+## 🌟 Key Features
 EKO currently supports:
 
 * **Dual-Pane Interactive Workspace:** 
@@ -20,6 +21,9 @@ EKO currently supports:
   * Instant PDF export of polished notes via `html2pdf.js`.
   * Real-time WebSocket synchronization across devices with SQLite/PostgreSQL persistence.
 
+## Architecture
+
+![EKO Workspace Architecture](image.png)
 
 ## Tech Stack
 
@@ -65,7 +69,7 @@ Eko/
 ├── temp_uploads/
 └── image.png
 ```
-## RAG DATA INGESTION AND FLOW PIPELINE
+## RAG INGESTION AND DATA FLOW
 ```text
 [ User Selects PDF in Dropdown ]
                 │
