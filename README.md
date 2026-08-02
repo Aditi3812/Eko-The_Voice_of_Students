@@ -1,181 +1,164 @@
-# EKO — AI-Powered Collaborative Dual-Pane Study Workspace
+# EKO
 
-**EKO** is an intelligent, dual-pane interactive study workspace that combines real-time collaborative note-taking with document viewing and Retrieval-Augmented Generation (RAG) AI agents. Built with Next.js, FastAPI, ChromaDB, and Google Gemini Embeddings, EKO allows students and researchers to read, annotate, synthesize, and query course materials seamlessly in one place.
+EKO is a dual-pane study workspace that combines course document viewing, collaborative note editing, and Gemini-powered retrieval and synthesis. The backend is FastAPI with ChromaDB-backed document ingestion, and the frontend is a Next.js workspace UI.
 
----
+## Architecture
 
-## 🌟 Key Features
+![EKO Workspace Architecture](image.png)
 
-* **Dual-Pane Interactive Workspace:** 
-  * Left Pane: Dynamic PDF reference viewer with document switching per classroom unit.
-  * Right Pane: Rich text workspace editor powered by TipTap with real-time auto-saving and WebSocket collaboration.
-* **Automated Vector Ingestion Pipeline:** 
-  * On-demand PDF parsing, chunking (`RecursiveCharacterTextSplitter`), and embedding generation using `models/gemini-embedding-001`.
-  * Deduplicated vector caching per document and unit in ChromaDB.
-* **Eko Study Buddy (RAG Agent):** 
-  * Context-aware vector search assistant using filtered metadata queries (`unit_id` and `document_id`) to answer questions directly from uploaded materials.
-  * Fallback vector search mechanism across unit-wide knowledge bases.
-* **AI Note Synthesizer Agent:** 
-  * One-click transformation of raw, messy study notes into polished, structured study guides.
-* **Export & Synchronization:** 
-  * Instant PDF export of polished notes via `html2pdf.js`.
-  * Real-time WebSocket synchronization across devices with SQLite/PostgreSQL persistence.
+## What It Does
 
----
+EKO currently supports:
 
-## 🏗️ System Architecture
-![EKO Workspace System Architecture]()![alt text](image.png)
----
+* Classroom-style document browsing by department, semester, subject, and unit.
+* PDF upload and ingestion into ChromaDB for retrieval-augmented answers.
+* Real-time collaborative notes over a WebSocket room.
+* Gemini-powered study-buddy Q&A and note synthesis.
+* Optional peer availability tracking via the matchmaker endpoint.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-### **Frontend**
-* **Framework:** Next.js 14+ (App Router, TypeScript)
-* **Styling:** Tailwind CSS, Lucide Icons
-* **Rich Text Editor:** TipTap Editor (`@tiptap/react`, `@tiptap/starter-kit`)
-* **Utilities:** `html2pdf.js` for PDF generation
+### Frontend
 
-### **Backend**
-* **Framework:** FastAPI (Python 3.10+)
-* **Database / ORM:** SQLAlchemy (PostgreSQL / SQLite)
-* **Real-Time Sync:** WebSockets (`websockets`)
-* **PDF Processing:** `pypdf`, `io.BytesIO`
+* Next.js 16 with the App Router
+* React 19
+* TypeScript
+* TipTap, React PDF, React Resizable Panels, html2pdf.js, and Lucide React
 
-### **AI & RAG Engine**
-* **Vector Store:** ChromaDB (`chromadb`)
-* **Embeddings:** Google Generative AI Embeddings (`models/gemini-embedding-001`)
-* **Text Chunking:** LangChain (`RecursiveCharacterTextSplitter`)
+### Backend
 
----
+* FastAPI
+* SQLAlchemy
+* SQLite by default, configurable through `DATABASE_URL`
+* ChromaDB for vector storage
+* Google Gemini for embeddings and generation
+* PyPDF for PDF text extraction
 
-## 📁 Project Directory Structure
+## Project Layout
 
 ```text
-eko-workspace/
+Eko/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                    # FastAPI Entrypoint & Middleware
-│   │   ├── database.py                # Database Connection & Sessions
-│   │   ├── vector_store.py            # ChromaDB Client & Embedding Config
+│   │   ├── main.py
+│   │   ├── database.py
+│   │   ├── vector_store.py
+│   │   ├── websocket_manager.py
+│   │   ├── core/
+│   │   ├── models/
 │   │   └── routers/
-│   │       ├── course.py              # Ingestion & Auto-Ingestion Routes
-│   │       ├── study_buddy.py         # RAG Query Agent Router
-│   │       ├── synthesizer.py         # AI Note Polishing Router
-│   │       ├── notes.py               # Note Storage & WebSocket Handlers
-│   │       └── classrooms.py          # Unit & Document Stream Routes
-│   ├── chroma_db/                     # Persistent ChromaDB Local Directory
-│   ├── requirements.txt               # Backend Python Dependencies
-│   └── ingest.py                      # Standalone Ingestion Utility
-│
-└── frontend/
-    ├── app/
-    │   ├── workspace/
-    │   │   └── page.tsx               # Main Dual-Pane Workspace Interface
-    │   ├── layout.tsx
-    │   └── globals.css
-    ├── package.json                   # Frontend Dependencies
-    └── next.config.js
+│   ├── chroma_db/
+│   ├── req.txt
+│   ├── test.py
+│   └── test_query.py
+├── frontend/
+│   ├── app/
+│   ├── lib/
+│   ├── public/
+│   └── package.json
+├── uploads/
+├── temp_uploads/
+└── image.png
 ```
 
-Ingestion & RAG Data Flow
+## Setup
 
-```text
-[ User Selects PDF in Dropdown ]
-                │
-                ▼
-  POST /api/v1/course/ensure-ingested
-                │
-        ┌───────┴───────┐
-        │ Existing in   │
-        │ ChromaDB?     │
-        └───────┬───────┘
-       YES │         │ NO
-           │         ▼
-           │  1. Parse PDF pages using PyPDF
-           │  2. Chunk text (size: 800, overlap: 100)
-           │  3. Attach Metadata (unit_id, document_id, page, source)
-           │  4. Embed via 'models/gemini-embedding-001'
-           │  5. Persist to ChromaDB collection
-           │
-           ▼
-[ Ready for Study Buddy Queries ]
-                │
-                ▼
-  POST /api/v1/agent/study-buddy/query
-                │
-  Search ChromaDB Collection using metadata filter:
-  {"document_id": doc_id} ──(Fallback)──> Search Entire Unit
-                │
-                ▼
-  Context Retrieved ──> LLM Response Generated
-```
+### Prerequisites
 
-🚀 Setup & Installation
-Prerequisites
-Python 3.10 or higher
+* Python 3.10 or higher
+* Node.js 18 or higher
+* A Google Gemini API key
 
-Node.js 18.x or higher
+### Backend
 
-Google Gemini API Key
+```bash
+cd backend
 
-1. Backend Setup
-Bash
-# Clone the repository
-git clone [https://github.com/your-username/eko-workspace.git](https://github.com/your-username/eko-workspace.git)
-cd eko-workspace/backend
-
-# Create and activate a virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+pip install -r req.txt
+```
 
-# Create environment file
-cp .env.example .env
-Configure your .env file:
+Create a file named `.env` in `backend/` with:
 
-Code snippet
+```env
 GEMINI_API_KEY=your_google_gemini_api_key_here
 DATABASE_URL=sqlite:///./eko.db
 PORT=8000
+```
+
 Start the FastAPI server:
 
-Bash
+```bash
 uvicorn app.main:app --reload --port 8000
-2. Frontend Setup
-Bash
+```
+
+### Frontend
+
+```bash
 cd ../frontend
-
-# Install Node modules
 npm install
+```
 
-# Create environment file
-cp .env.example .env.local
-Configure .env.local:
+Create a file named `.env.local` in `frontend/` with:
 
-Code snippet
+```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
 Start the Next.js development server:
 
-Bash
+```bash
 npm run dev
-Open http://localhost:3000/workspace in your browser.
+```
 
-📡 Key API Endpoints
-Method,Endpoint,Description
-POST,/api/v1/course/ensure-ingested,Checks if a PDF is vectorized; parses and embeds it if missing.
-POST,/api/v1/agent/study-buddy/query,RAG query endpoint that retrieves chunks and generates answers.
-POST,/api/v1/agent/synthesizer/compile,Synthesizes raw workspace notes into structured study guides.
-GET,/api/v1/classrooms/documents/{doc_id}/download,Streams PDF reference materials for the workspace viewer.
-WS,/api/v1/notes/ws/{room_id},Real-time WebSocket endpoint for collaborative note editing.
+Open `http://localhost:3000/workspace` in your browser.
 
-🧪 Troubleshooting
-Model Mismatch / Vector Errors (404 NOT_FOUND): Ensure vector_store.py explicitly uses models/gemini-embedding-001.
+## API Endpoints
 
-Zero Results from RAG Query: Verify that document_id is included in ChromaDB metadata during chunk ingestion.
+### Authentication
 
-Scanned PDFs: If extract_text() returns empty strings, ensure your PDFs contain embedded digital text or run OCR pre-processing.
+* `POST /api/v1/auth/signup` - Create a new user account
+* `POST /api/v1/auth/login` - Log in and receive a bearer token
 
-📄 License
+### Ingestion and Retrieval
+
+* `POST /api/v1/course/ensure-ingested` - Check whether a document is already vectorized and ingest it if needed
+* `POST /api/v1/agent/study-buddy/query` - RAG query endpoint for asking questions about course material
+* `POST /api/v1/agent/synthesizer/compile` - Turn raw notes into a polished HTML study guide
+
+### Classroom Data
+
+* `GET /api/v1/classrooms/departments`
+* `GET /api/v1/classrooms/departments/{department_id}/semesters`
+* `GET /api/v1/classrooms/semesters/{semester_id}/subjects`
+* `GET /api/v1/classrooms/subjects/{subject_id}/units`
+* `GET /api/v1/classrooms/units/{unit_id}/documents`
+* `POST /api/v1/classrooms/departments/create`
+* `POST /api/v1/classrooms/semesters/create`
+* `POST /api/v1/classrooms/subjects/create`
+* `POST /api/v1/classrooms/units/create`
+* `POST /api/v1/classrooms/units/upload-material`
+* `GET /api/v1/classrooms/documents/{document_id}/download` - Stream a stored PDF or return an external link
+
+### Notes and Collaboration
+
+* `POST /api/v1/notes/save`
+* `GET /api/v1/notes/{note_id}`
+* `WS /api/v1/notes/ws/{room_id}` - Real-time collaborative note editing
+
+### Matchmaker
+
+* `POST /api/v1/agent/matchmaker/toggle` - Update peer availability for a course and detect matches
+
+## Troubleshooting
+
+* If the study buddy returns a model or vector error, confirm `GEMINI_API_KEY` is set and that `vector_store.py` uses the same embedding model expected by the rest of the app.
+* If RAG queries return no useful results, confirm the document chunks were ingested with `document_id` in ChromaDB metadata.
+* If a PDF ingests as empty text, the file may be scanned-only. The current ingestion path uses `extract_text()`, so OCR would be needed for image-only PDFs.
+* If the frontend cannot reach the backend, confirm `NEXT_PUBLIC_API_URL=http://localhost:8000` and that the FastAPI server is running.
+
+## License
+
 Built by Me hehe.
