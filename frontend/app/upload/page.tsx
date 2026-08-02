@@ -6,6 +6,7 @@ import { UploadCloud, CheckCircle2, Loader2 } from 'lucide-react';
 export default function UploadPortal() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
+  const [uploadedFilename, setUploadedFilename] = useState<string>(''); // Store backend filename
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'success'>('idle');
   const [countdown, setCountdown] = useState(3);
 
@@ -38,7 +39,10 @@ export default function UploadPortal() {
       });
 
       if (response.ok) {
-        // Trigger our simulated processing animation
+        const data = await response.json();
+        // Save the filename returned by FastAPI (e.g., data.filename or data.source)
+        setUploadedFilename(data.filename || file.name);
+        // Trigger simulated processing animation
         setStatus('processing');
       } else {
         alert('Upload sequence rejected by API backend.');
@@ -47,6 +51,15 @@ export default function UploadPortal() {
     } catch (err) {
       console.error('Handshake execution drop:', err);
       setStatus('idle');
+    }
+  };
+
+  const handleEnterWorkspace = () => {
+    if (uploadedFilename) {
+      // Redirect to /workspace passing the uploaded PDF filename as a query param
+      router.push(`/workspace?pdf=${encodeURIComponent(uploadedFilename)}`);
+    } else {
+      router.push('/workspace');
     }
   };
 
@@ -99,7 +112,7 @@ export default function UploadPortal() {
               <CheckCircle2 className="w-4 h-4" />
               <span>Successfully Embedded! ✅</span>
             </div>
-            <button onClick={() => router.push('/workspace')} className="w-full bg-black text-white font-bold py-3 text-xs uppercase tracking-wider">
+            <button onClick={handleEnterWorkspace} className="w-full bg-black text-white font-bold py-3 text-xs uppercase tracking-wider">
               Enter Intelligent Canvas
             </button>
           </div>

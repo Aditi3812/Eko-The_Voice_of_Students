@@ -3,28 +3,29 @@ import chromadb
 from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
 
+# Load .env variables (GEMINI_API_KEY or GOOGLE_API_KEY)
 load_dotenv()
-"""Create a dedicated file inside your backend app directory eko/backend/app/vector_store.py to initialize ChromaDB persistently inside a local directory layer:"""
-#  OLD BROKEN LINE:
-# CHROMA_DATA_PATH = os.path.join(os.path.dirname(__dirname), "chroma_db")
 
-# ✅ NEW FIXED LINE:
-# os.path.abspath(__file__) gets the path of vector_store.py, and dirname gets its folder.
+# 1. Resolve path relative to backend root: /backend/app -> /backend/chroma_db
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-# We look one level up to place chroma_db in the backend root directory
 CHROMA_DATA_PATH = os.path.join(os.path.dirname(CURRENT_DIR), "chroma_db")
 
-# Initialize a Persistent Local Client
+# 2. Initialize persistent ChromaDB client
 chroma_client = chromadb.PersistentClient(path=CHROMA_DATA_PATH)
 
-# Configure the explicit Gemini Embedding Function
+# 3. Initialize Gemini Embedding Function (automatically uses GEMINI_API_KEY / GOOGLE_API_KEY from env)
 gemini_ef = embedding_functions.GoogleGeminiEmbeddingFunction(
-    model_name="gemini-embedding-001"
+    model_name="models/gemini-embedding-001"
 )
 
-def get_collection(course_id: str):
-    """Fetches or creates a text collection matching the course string context."""
+# 4. Helper function to fetch or create collections dynamically
+def get_unit_collection(unit_id: str):
+    """
+    Fetches or creates a ChromaDB vector collection for a specific unit.
+    Format: unit_<clean_uuid_or_id>
+    """
+    clean_unit_id = str(unit_id).lower().replace("-", "_")
     return chroma_client.get_or_create_collection(
-        name=f"course_{course_id.lower().replace('-', '_')}",
+        name=f"unit_{clean_unit_id}",
         embedding_function=gemini_ef
     )

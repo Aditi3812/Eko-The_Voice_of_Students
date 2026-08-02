@@ -1,39 +1,112 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from uuid import UUID
+from typing import Optional
+
 from app.database import get_db
 from app.websocket_manager import manager
 
-#This handles both real-time typing sync via WebSocket and auto-saving to Neon.
 router = APIRouter(prefix="/api/v1/notes", tags=["notes"])
+
 
 class SaveNoteRequest(BaseModel):
     note_id: str
-    course_id: str
-    content: str
+    unit_id: Optional[str] = None
+    owner_id: Optional[str] = None
+    title: Optional[str] = "Untitled Note"
+    content: str  # Maps to content_html in DB
 
-# --- REST ENDPOINT: Save Note to Neon ---
+
+# --- REST ENDPOINT: Save Note to Database ---
+import uuid
+from uuid import UUID
+
 @router.post("/save")
 def save_note(payload: SaveNoteRequest, db: Session = Depends(get_db)):
-    query = text("""
-        INSERT INTO collaborative_notes (note_id, course_id, content, last_updated)
-        VALUES (:note_id, :course_id, :content, CURRENT_TIMESTAMP)
-        ON CONFLICT (note_id) 
-        DO UPDATE SET content = :content, last_updated = CURRENT_TIMESTAMP;
-    """)
-    db.execute(query, {"note_id": payload.note_id, "course_id": payload.course_id, "content": payload.content})
-    db.commit()
-    return {"status": "success", "note_id": payload.note_id}
+    # Convert string to deterministic UUID if it contains prefixes like 'unit_note_'
+    try:
+        note_uuid = UUID(payload.note_id)
+    except ValueError:
+        # Generates a consistent, valid UUID for non-standard room string IDs
+        note_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, payload.note_id)
 
-# --- REST ENDPOINT: Load Note from Neon ---
+    unit_uuid = None
+    if payload.unit_id:
+        try:
+            unit_uuid = UUID(payload.unit_id)
+        except ValueError:
+            pass
+
+    owner_uuid = None
+    if payload.owner_id:
+        try:
+            owner_uuid = UUID(payload.owner_id)
+        except ValueError:
+            pass
+
+    query = text("""
+        INSERT INTO notes (note_id, unit_id, owner_id, title, content_html, last_updated)
+        VALUES (:note_id, :unit_id, :owner_id, :title, :content_html, CURRENT_TIMESTAMP)
+        ON CONFLICT (note_id) 
+        DO UPDATE SET 
+            content_html = EXCLUDED.content_html,
+            title = COALESCE(EXCLUDED.title, notes.title),
+            last_updated = CURRENT_TIMESTAMP;
+    """)
+
+    db.execute(
+        query,
+        {
+            "note_id": note_uuid,
+            "unit_id": unit_uuid,
+            "owner_id": owner_uuid,
+            "title": payload.title,
+            "content_html": payload.content,
+        },
+    )
+    db.commit()
+    return {"status": "success", "note_id": str(note_uuid)}
+
+# --- REST ENDPOINT: Load Note from Database ---
 @router.get("/{note_id}")
 def get_note(note_id: str, db: Session = Depends(get_db)):
-    query = text("SELECT note_id, course_id, content FROM collaborative_notes WHERE note_id = :note_id")
-    result = db.execute(query, {"note_id": note_id}).fetchone()
+    # Check if note_id is a valid UUID
+    try:
+        valid_uuid = UUID(note_id)
+    except ValueError:
+        # Fallback response for mock room IDs or non-UUID route parameters
+        return {
+            "note_id": note_id,
+            "unit_id": None,
+            "title": "Unit 3: Graph Theory & Paths",
+            "content": "# Unit 3: Graph Theory & Paths\n\nStart typing notes here...",
+        }
+
+    query = text("""
+        SELECT note_id, unit_id, owner_id, title, content_html 
+        FROM notes 
+        WHERE note_id = :note_id
+    """)
+    result = db.execute(query, {"note_id": valid_uuid}).fetchone()
+
     if not result:
-        return {"note_id": note_id, "course_id": "CSE-301", "content": "# Unit 3: Graph Theory & Paths\n\nStart typing notes here..."}
-    return {"note_id": result.note_id, "course_id": result.course_id, "content": result.content}
+        return {
+            "note_id": str(valid_uuid),
+            "unit_id": None,
+            "title": "Unit 3: Graph Theory & Paths",
+            "content": "# Unit 3: Graph Theory & Paths\n\nStart typing notes here...",
+        }
+
+    return {
+        "note_id": str(result.note_id),
+        "unit_id": str(result.unit_id) if result.unit_id else None,
+        "owner_id": str(result.owner_id) if result.owner_id else None,
+        "title": result.title or "Untitled Note",
+        "content": result.content_html or "",
+    }
+
 
 # --- WEBSOCKET ENDPOINT: Real-time Live Typing Broadcast ---
 @router.websocket("/ws/{room_id}")

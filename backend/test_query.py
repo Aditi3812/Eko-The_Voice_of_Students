@@ -1,15 +1,7 @@
-from app.vector_store import get_collection
+import chromadb
 
-# Fetch the collection created during ingestion
-collection = get_collection("CSE-301")
-
-# Print total number of chunks stored
-print(f"📊 Total Chunks Stored: {collection.count()}")
-
-# Peek at the first chunk and its metadata
-results = collection.peek(limit=1)
-print("\n📝 Sample Document Chunk:")
-print(results["documents"][0] if results["documents"] else "No documents found.")
-
-print("\n🏷️ Sample Metadata:")
-print(results["metadatas"][0] if results["metadatas"] else "No metadata found.")
+client = chromadb.PersistentClient(path="./chroma_db")
+# Query your unit collection
+collection = client.get_collection("unit_<YOUR_UNIT_ID>")
+results = collection.query(query_texts=["sample query"], n_results=3)
+print(results)

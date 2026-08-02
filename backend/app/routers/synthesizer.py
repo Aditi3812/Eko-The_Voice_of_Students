@@ -20,6 +20,7 @@ async def compile_study_guide(payload: SynthesizeRequest):
         system_instruction = (
             "You are Eko Synthesizer Agent. Take messy HTML notes written by students and restructure them "
             "into a beautifully structured, highly polished HTML study guide. "
+            "Make sure to only use the content the student has made notes of."
             "Use clear headers (<h1>, <h2>), bullet points (<ul>, <li>), bold key terms, and code blocks (<pre><code>) if applicable. "
             "Return ONLY clean HTML body content without Markdown block wrappers like ```html."
         )
