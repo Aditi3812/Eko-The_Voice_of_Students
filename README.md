@@ -106,6 +106,7 @@ Ingestion & RAG Data Flow
                 │
                 ▼
   Context Retrieved ──> LLM Response Generated
+```
 
 🚀 Setup & Installation
 Prerequisites
