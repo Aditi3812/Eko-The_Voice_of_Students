@@ -1,6 +1,6 @@
 # EKO
 
-EKO is a dual-pane study workspace that combines RAG based course document viewing, collaborative note editing, and Gemini-powered retrieval and synthesis. The backend is FastAPI with ChromaDB-backed document ingestion, and the frontend is a Next.js workspace UI.
+EKO is a dual-pane study workspace that combines RAG based course document viewing, collaborative note editing, and Gemini-powered retrieval and synthesis. The backend is FastAPI with ChromaDB-backed document ingestion, and the frontend is a Next.js workspace UI.  
 
 
 ## 🌟 Key Features
